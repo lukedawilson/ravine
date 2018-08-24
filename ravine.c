@@ -181,9 +181,8 @@ typedef struct {
   byte y2;
 } Border;
 
-Player player;
-
 byte newframe[28][32];
+Player player;
 
 void screen_flip() {
   // implemented in assembler - c equivalent is:
@@ -234,9 +233,10 @@ void initialise_player() {
   newframe[player.x][player.y] = SHIP;
 }
 
-Border border;
-const byte old_x1 = 0;
 void draw_box() {
+  Border border;
+  byte old_x1 = 0;
+
   border.x1 = 0;
   border.y1 = 0;
   border.x2 = 27;
@@ -280,11 +280,10 @@ void handle_player_input() {
   }
 }
 
-word x1_movement, x2_movement;
-Walls prev, new;
-byte x, y, exit_early_counter;
 void game_loop() {
-  exit_early_counter = 0;
+  word x1_movement, x2_movement;
+  Walls prev, new;
+  byte x, y, exit_early_counter = 0;
 
   while (1) {
     x1_movement = rand();
