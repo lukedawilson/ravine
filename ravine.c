@@ -84,7 +84,7 @@ __endasm;
 
 static word lfsr = 1;
 word rand() {
-  unsigned lsb = lfsr & 1;   /* Get LSB (i.e., the output bit). */
+  unsigned lsb = lfsr & 1;   /* Get LSB (x.e., the output bit). */
   lfsr >>= 1;                /* Shift register */
   if (lsb) {                 /* If the output bit is 1, apply toggle mask. */
     lfsr ^= 0xB400u;
@@ -168,16 +168,8 @@ Player player;
 
 byte newframe[28][32];
 
-void clear_frame() {
-  for (byte i = 0; i < 28; i++) {
-    for (byte j = 0; j < 32; j++) {
-      newframe[i][j] = ' ';
-    }
-  }
-}
-
 void initialise_walls() {
-  byte i = Y_MAX;
+  byte x = Y_MAX;
   word x1_movement;
   word x2_movement;
   Walls walls;
@@ -185,7 +177,7 @@ void initialise_walls() {
   walls.x1 = 5;
   walls.x2 = 20;
 
-  while (i >= Y_MIN) {
+  while (x >= Y_MIN) {
     x1_movement = rand();
     x2_movement = rand();
 
@@ -201,84 +193,100 @@ void initialise_walls() {
       walls.x2 += 1;
     }
 
-    newframe[walls.x1][i] = WALL;
-    newframe[walls.x2][i] = WALL;
+    newframe[walls.x1][x] = WALL;
+    newframe[walls.x2][x] = WALL;
 
-    i--;
+    x--;
   }
 }
 
-void draw_box(byte x, byte y, byte x2, byte y2, const char* chars) {
+void initialise_player() {
+  player.x = 14;
+  player.y = 5;
+  newframe[player.x][player.y] = SHIP;
+}
+
+void draw_box() {
+  byte x = 0, y = 0, x2 = 27, y2 = 31;
+
   byte x1 = x;
-  newframe[x][y] = chars[2];
-  newframe[x2][y] = chars[3];
-  newframe[x][y2] = chars[0];
-  newframe[x2][y2] = chars[1];
+  newframe[x][y] = BOX_CHARS[2];
+  newframe[x2][y] = BOX_CHARS[3];
+  newframe[x][y2] = BOX_CHARS[0];
+  newframe[x2][y2] = BOX_CHARS[1];
   while (++x < x2) {
-    newframe[x][y] = chars[5];
-    newframe[x][y2] = chars[4];
+    newframe[x][y] = BOX_CHARS[5];
+    newframe[x][y2] = BOX_CHARS[4];
   }
   while (++y < y2) {
-    newframe[x1][y] = chars[6];
-    newframe[x2][y] = chars[7];
+    newframe[x1][y] = BOX_CHARS[6];
+    newframe[x2][y] = BOX_CHARS[7];
   }
 }
 
 void handle_player_input() {
-  newframe[player.x][player.y] = ' ';
-
   if (LEFT1 && player.x > X_MIN) {
+    newframe[player.x][player.y] = ' ';
     player.x -= 1;
-    delay(40);
+    newframe[player.x][player.y] = SHIP;
+    //delay(40);
   } else if (RIGHT1 && player.x < X_MAX) {
+    newframe[player.x][player.y] = ' ';
     player.x += 1;
-    delay(40);
+    newframe[player.x][player.y] = SHIP;
+    //delay(40);
   } else if (UP1 && player.y < Y_MAX) {
+    newframe[player.x][player.y] = ' ';
     player.y += 1;
-    delay(40);
+    newframe[player.x][player.y] = SHIP;
+    //delay(40);
   } else if (DOWN1 && player.y > Y_MIN) {
+    newframe[player.x][player.y] = ' ';
     player.y -= 1;
+    newframe[player.x][player.y] = SHIP;
+    //delay(40);
   }
-
-  newframe[player.x][player.y] = SHIP;
 }
 
 void game_loop() {
   word x1_movement, x2_movement;
   Walls prev, new;
-  byte i, j;
-
-  player.x = 14;
-  player.y = 5;
+  byte x, y;
+  byte exit_early_counter = 0;
 
   while (1) {
-    draw_box(0, 0, 27, 31, BOX_CHARS);
-
     x1_movement = rand();
     x2_movement = rand();
 
     prev.x1 = prev.x2 = new.x1 = new.x2 = 0;
 
-    // move existing rows down
-    for (i = X_MIN + 1; i <= X_MAX; i++) {
-      for (j = Y_MIN + 1; j <= Y_MAX + 1; j++) {
-        // if we've reached the top of the screen,
-        // grab the positions of the walls, so we
-        // can generate a new row later
-        if (j == Y_MAX + 1 && getchar(i, j - 1) == WALL) {
-          if (prev.x1 == 0) {
-            prev.x1 = i;
-          } else {
-            prev.x2 = i;
+    // move all rows down the screen by one
+    for (x = X_MIN + 1; x <= X_MAX; x++) {
+      for (y = Y_MIN; y <= Y_MAX + 1; y++) {
+        // if the current cell is a wall, 'move' it
+        // one row down
+        if (getchar(x, y) == WALL) {
+          // if we've reached the top of the screen,
+          // grab the positions of the walls, so we
+          // can generate a new row later
+          if (y == Y_MAX) {
+            if (prev.x1 == 0) {
+              prev.x1 = x;
+            } else {
+              prev.x2 = x;
+            }
           }
-        }
 
-        if (getchar(i, j) == WALL) {
-          newframe[i][j - 1] = WALL;
+          // erase walls on current row,
+          // and set them on row below
+          newframe[x][y] = ' ';
+          if (y > Y_MIN) {
+            newframe[x][y - 1] = WALL;
+          }
 
           // collision-detection
-          if (player.x == i && player.y == j - 1) {
-            for (i = 0; i < 40; i++) {
+          if (player.x == x && player.y == y - 1) {
+            for (x = 0; x < 40; x++) {
               palette = 2;
               delay(10);
               palette = 1;
@@ -286,10 +294,17 @@ void game_loop() {
             }
             return;
           }
+
+          // exit early if both walls have been rendered,
+          // and we've subsequently gone through one more
+          // loop to clean up the cell to the right
+          if (exit_early_counter++ == 2) {
+            exit_early_counter++;
+          } else if (exit_early_counter++ == 3) {
+            break;
+          }
         }
       }
-
-      handle_player_input();
     }
 
     // new row
@@ -312,9 +327,12 @@ void game_loop() {
     newframe[new.x1][Y_MAX] = WALL;
     newframe[new.x2][Y_MAX] = WALL;
 
+    // get user input and draw border
+    handle_player_input();
+    draw_box();
+
     // flip the screen
     memcpy(cellram, newframe, sizeof(newframe));
-    clear_frame();
   }
 }
 
@@ -324,11 +342,16 @@ void main() {
   memset(cellram, 0, sizeof(cellram));
   memcpy(tileram, font8x8, sizeof(font8x8));
 
-  clear_frame();
-  draw_box(0, 0, 27, 31, BOX_CHARS);
+  for (byte x = 0; x < 28; x++) {
+    for (byte y = 0; y < 32; y++) {
+      newframe[x][y] = ' ';
+    }
+  }
+
+  draw_box();
   initialise_walls();
+  initialise_player();
   memcpy(cellram, newframe, sizeof(newframe));
-  clear_frame();
 
   game_loop();
 
