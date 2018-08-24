@@ -144,22 +144,6 @@ extern byte font8x8[0x100][8];
 
 const char BOX_CHARS[8] = { 218, 191, 192, 217, 196, 196, 179, 179 };
 
-void draw_box(byte x, byte y, byte x2, byte y2, const char* chars) {
-  byte x1 = x;
-  putchar(x, y, chars[2]);
-  putchar(x2, y, chars[3]);
-  putchar(x, y2, chars[0]);
-  putchar(x2, y2, chars[1]);
-  while (++x < x2) {
-    putchar(x, y, chars[5]);
-    putchar(x, y2, chars[4]);
-  }
-  while (++y < y2) {
-    putchar(x1, y, chars[6]);
-    putchar(x2, y, chars[7]);
-  }
-}
-
 // GAME CODE
 
 #define SHIP 6
@@ -182,25 +166,14 @@ typedef struct {
 
 Player player;
 
-void handle_player_input() {
-  if (LEFT1 && player.x > X_MIN) {
-    putchar(player.x, player.y, ' ');
-    player.x -= 1;
-    delay(40);
-  } else if (RIGHT1 && player.x < X_MAX) {
-    putchar(player.x, player.y, ' ');
-    player.x += 1;
-    delay(40);
-  } else if (UP1 && player.y < Y_MAX) {
-    putchar(player.x, player.y, ' ');
-    player.y += 1;
-    delay(40);
-  } else if (DOWN1 && player.y > Y_MIN) {
-    putchar(player.x, player.y, ' ');
-    player.y -= 1;
-  }
+byte newframe[28][32];
 
-  putchar(player.x, player.y, SHIP);
+void clear_frame() {
+  for (byte i = 0; i < 28; i++) {
+    for (byte j = 0; j < 32; j++) {
+      newframe[i][j] = ' ';
+    }
+  }
 }
 
 void initialise_walls() {
@@ -216,9 +189,6 @@ void initialise_walls() {
     x1_movement = rand();
     x2_movement = rand();
 
-    putchar(walls.x1, i, ' ');
-    putchar(walls.x2, i, ' ');
-
     if (x1_movement & 0 == 0 && walls.x1 > X_MIN + 1) {
       walls.x1 -= 1;
     } else if (walls.x1 < walls.x2 - 2) {
@@ -231,11 +201,46 @@ void initialise_walls() {
       walls.x2 += 1;
     }
 
-    putchar(walls.x1, i, WALL);
-    putchar(walls.x2, i, WALL);
+    newframe[walls.x1][i] = WALL;
+    newframe[walls.x2][i] = WALL;
 
     i--;
   }
+}
+
+void draw_box(byte x, byte y, byte x2, byte y2, const char* chars) {
+  byte x1 = x;
+  newframe[x][y] = chars[2];
+  newframe[x2][y] = chars[3];
+  newframe[x][y2] = chars[0];
+  newframe[x2][y2] = chars[1];
+  while (++x < x2) {
+    newframe[x][y] = chars[5];
+    newframe[x][y2] = chars[4];
+  }
+  while (++y < y2) {
+    newframe[x1][y] = chars[6];
+    newframe[x2][y] = chars[7];
+  }
+}
+
+void handle_player_input() {
+  newframe[player.x][player.y] = ' ';
+
+  if (LEFT1 && player.x > X_MIN) {
+    player.x -= 1;
+    delay(40);
+  } else if (RIGHT1 && player.x < X_MAX) {
+    player.x += 1;
+    delay(40);
+  } else if (UP1 && player.y < Y_MAX) {
+    player.y += 1;
+    delay(40);
+  } else if (DOWN1 && player.y > Y_MIN) {
+    player.y -= 1;
+  }
+
+  newframe[player.x][player.y] = SHIP;
 }
 
 void game_loop() {
@@ -243,12 +248,12 @@ void game_loop() {
   Walls prev, new;
   byte i, j;
 
-  initialise_walls();
-
   player.x = 14;
   player.y = 5;
 
   while (1) {
+    draw_box(0, 0, 27, 31, BOX_CHARS);
+
     x1_movement = rand();
     x2_movement = rand();
 
@@ -257,20 +262,21 @@ void game_loop() {
     // move existing rows down
     for (i = X_MIN + 1; i <= X_MAX; i++) {
       for (j = Y_MIN + 1; j <= Y_MAX + 1; j++) {
-        if (getchar(i, j - 1) == WALL) {
-          putchar(i, j - 1, ' ');
-
-          if (j == Y_MAX + 1) {
-            if (prev.x1 == 0) {
-              prev.x1 = i;
-            } else {
-              prev.x2 = i;
-            }
+        // if we've reached the top of the screen,
+        // grab the positions of the walls, so we
+        // can generate a new row later
+        if (j == Y_MAX + 1 && getchar(i, j - 1) == WALL) {
+          if (prev.x1 == 0) {
+            prev.x1 = i;
+          } else {
+            prev.x2 = i;
           }
         }
 
         if (getchar(i, j) == WALL) {
-          putchar(i, j - 1, WALL);
+          newframe[i][j - 1] = WALL;
+
+          // collision-detection
           if (player.x == i && player.y == j - 1) {
             for (i = 0; i < 40; i++) {
               palette = 2;
@@ -303,16 +309,28 @@ void game_loop() {
       new.x2 = prev.x2;
     }
 
-    putchar(new.x1, Y_MAX, WALL);
-    putchar(new.x2, Y_MAX, WALL);
+    newframe[new.x1][Y_MAX] = WALL;
+    newframe[new.x2][Y_MAX] = WALL;
+
+    // flip the screen
+    memcpy(cellram, newframe, sizeof(newframe));
+    clear_frame();
   }
 }
 
 void main() {
   palette = 1;
+
   memset(cellram, 0, sizeof(cellram));
   memcpy(tileram, font8x8, sizeof(font8x8));
+
+  clear_frame();
   draw_box(0, 0, 27, 31, BOX_CHARS);
+  initialise_walls();
+  memcpy(cellram, newframe, sizeof(newframe));
+  clear_frame();
+
   game_loop();
+
   while (1);
 }
