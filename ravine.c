@@ -1,4 +1,4 @@
-﻿#include <string.h>
+#include <string.h>
 
 typedef unsigned char byte;
 typedef unsigned short word;
@@ -44,7 +44,6 @@ typedef enum {
   AY_ENV_PERI_LO, AY_ENV_PERI_HI,
   AY_ENV_SHAPE
 } AY8910Register;
-
 
 // STARTUP CODE
 
@@ -168,6 +167,17 @@ Player player;
 
 byte newframe[28][32];
 
+void screen_flip() {
+  // implemented in assembler - c equivalent is:
+  //   memcpy(cellram, newframe, sizeof(newframe));
+__asm
+  LD HL, #_newframe ; load newframe into HL register
+  LD DE, #_cellram  ; load cellram into DE register
+  LD BC, #0x0380    ; set BC register to length of cellram
+  LDIR              ; copies HL to DE for BC bytes
+__endasm;
+}
+
 void initialise_walls() {
   byte x = Y_MAX;
   word x1_movement;
@@ -202,7 +212,7 @@ void initialise_walls() {
 
 void initialise_player() {
   player.x = 14;
-  player.y = 5;
+  player.y = Y_MIN;
   newframe[player.x][player.y] = SHIP;
 }
 
@@ -332,7 +342,7 @@ void game_loop() {
     draw_box();
 
     // flip the screen
-    memcpy(cellram, newframe, sizeof(newframe));
+    screen_flip();
   }
 }
 
@@ -340,6 +350,7 @@ void main() {
   palette = 1;
 
   memset(cellram, 0, sizeof(cellram));
+  screen_flip();
   memcpy(tileram, font8x8, sizeof(font8x8));
 
   for (byte x = 0; x < 28; x++) {
@@ -351,7 +362,7 @@ void main() {
   draw_box();
   initialise_walls();
   initialise_player();
-  memcpy(cellram, newframe, sizeof(newframe));
+  screen_flip();
 
   game_loop();
 
