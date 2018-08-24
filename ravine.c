@@ -3,7 +3,9 @@
 typedef unsigned char byte;
 typedef unsigned short word;
 
-// PLATFORM DEFINITION
+/////////////////
+// DEFINITIONS //
+/////////////////
 
 __sfr __at (0x0) input0;
 __sfr __at (0x1) input1;
@@ -45,7 +47,9 @@ typedef enum {
   AY_ENV_SHAPE
 } AY8910Register;
 
-// STARTUP CODE
+//////////////////
+// STARTUP CODE //
+//////////////////
 
 void main();
 void gsinit();
@@ -79,7 +83,39 @@ __asm
 __endasm;
 }
 
-// PLATFORM CODE
+////////////////////
+// INITIALISATION //
+////////////////////
+
+const byte __at (0x4000) color_prom[32] = {
+  0xe0,0x60,0x20,0x60, 0xc0,0x60,0x40,0xc0,
+  0x20,0x40,0x60,0x80, 0xa0,0xc0,0xe0,0x0e,
+  0xe0,0xe0,0xe0,0xe0, 0x60,0x60,0x60,0x60,
+  0xe0,0xe0,0xe0,0xe0, 0xe0,0xe0,0xe0,0xe0,
+};
+
+/*#define PE(fg,bg) (((fg)<<5) | ((bg)<<1))
+  const byte __at (0x4000) color_prom[32] = {
+  PE(7,0),PE(3,0),PE(1,0),PE(3,0),PE(6,0),PE(3,0),PE(2,0),PE(6,0),
+  PE(7,0),PE(3,0),PE(1,0),PE(3,0),PE(6,0),PE(3,0),PE(2,0),PE(6,0),
+  PE(7,0),PE(3,0),PE(1,0),PE(3,0),PE(6,0),PE(3,0),PE(2,0),PE(6,0),
+  PE(7,0),PE(3,0),PE(1,0),PE(3,0),PE(6,0),PE(3,0),PE(2,0),PE(6,0),
+};*/
+
+#define LOCHAR 0x0
+#define HICHAR 0xff
+
+#define CHAR(ch) (ch-LOCHAR)
+
+// PC font (code page 437)
+//#link "cp437.c"
+extern byte font8x8[0x100][8];
+
+const char BOX_CHARS[8] = { 218, 191, 192, 217, 196, 196, 179, 179 };
+
+/////////////
+// HELPERS //
+/////////////
 
 static word lfsr = 1;
 word rand() {
@@ -97,27 +133,6 @@ void delay(byte msec) {
     while (TIMER500HZ == 0) lfsr++;
   }
 }
-
-#define PE(fg,bg) (((fg)<<5) | ((bg)<<1))
-
-const byte __at (0x4000) color_prom[32] = {
-  0xe0,0x60,0x20,0x60, 0xc0,0x60,0x40,0xc0,
-  0x20,0x40,0x60,0x80, 0xa0,0xc0,0xe0,0x0e,
-  0xe0,0xe0,0xe0,0xe0, 0x60,0x60,0x60,0x60,
-  0xe0,0xe0,0xe0,0xe0, 0xe0,0xe0,0xe0,0xe0,
-};
-
-/*const byte __at (0x4000) color_prom[32] = {
-  PE(7,0),PE(3,0),PE(1,0),PE(3,0),PE(6,0),PE(3,0),PE(2,0),PE(6,0),
-  PE(7,0),PE(3,0),PE(1,0),PE(3,0),PE(6,0),PE(3,0),PE(2,0),PE(6,0),
-  PE(7,0),PE(3,0),PE(1,0),PE(3,0),PE(6,0),PE(3,0),PE(2,0),PE(6,0),
-  PE(7,0),PE(3,0),PE(1,0),PE(3,0),PE(6,0),PE(3,0),PE(2,0),PE(6,0),
-};*/
-
-#define LOCHAR 0x0
-#define HICHAR 0xff
-
-#define CHAR(ch) (ch-LOCHAR)
 
 void clrscr() {
   memset(cellram, CHAR(' '), sizeof(cellram));
@@ -137,13 +152,9 @@ void putstring(byte x, byte y, const char* string) {
   }
 }
 
-// PC font (code page 437)
-//#link "cp437.c"
-extern byte font8x8[0x100][8];
-
-const char BOX_CHARS[8] = { 218, 191, 192, 217, 196, 196, 179, 179 };
-
-// GAME CODE
+///////////////
+// GAME CODE //
+///////////////
 
 #define SHIP 6
 #define WALL 219
