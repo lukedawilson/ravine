@@ -174,6 +174,13 @@ typedef struct {
   byte x2;
 } Walls;
 
+typedef struct {
+  byte x1;
+  byte x2;
+  byte y1;
+  byte y2;
+} Border;
+
 Player player;
 
 byte newframe[28][32];
@@ -227,21 +234,25 @@ void initialise_player() {
   newframe[player.x][player.y] = SHIP;
 }
 
+Border border;
+const byte old_x1 = 0;
 void draw_box() {
-  byte x = 0, y = 0, x2 = 27, y2 = 31;
+  border.x1 = 0;
+  border.y1 = 0;
+  border.x2 = 27;
+  border.y2 = 31;
 
-  byte x1 = x;
-  newframe[x][y] = BOX_CHARS[2];
-  newframe[x2][y] = BOX_CHARS[3];
-  newframe[x][y2] = BOX_CHARS[0];
-  newframe[x2][y2] = BOX_CHARS[1];
-  while (++x < x2) {
-    newframe[x][y] = BOX_CHARS[5];
-    newframe[x][y2] = BOX_CHARS[4];
+  newframe[border.x1][border.y1] = BOX_CHARS[2];
+  newframe[border.x2][border.y1] = BOX_CHARS[3];
+  newframe[border.x1][border.y2] = BOX_CHARS[0];
+  newframe[border.x2][border.y2] = BOX_CHARS[1];
+  while (++border.x1 < border.x2) {
+    newframe[border.x1][border.y1] = BOX_CHARS[5];
+    newframe[border.x1][border.y2] = BOX_CHARS[4];
   }
-  while (++y < y2) {
-    newframe[x1][y] = BOX_CHARS[6];
-    newframe[x2][y] = BOX_CHARS[7];
+  while (++border.y1 < border.y2) {
+    newframe[old_x1][border.y1] = BOX_CHARS[6];
+    newframe[border.x2][border.y1] = BOX_CHARS[7];
   }
 }
 
@@ -269,11 +280,11 @@ void handle_player_input() {
   }
 }
 
+word x1_movement, x2_movement;
+Walls prev, new;
+byte x, y, exit_early_counter;
 void game_loop() {
-  word x1_movement, x2_movement;
-  Walls prev, new;
-  byte x, y;
-  byte exit_early_counter = 0;
+  exit_early_counter = 0;
 
   while (1) {
     x1_movement = rand();
