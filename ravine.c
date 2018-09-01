@@ -159,10 +159,13 @@ void putstring(byte x, byte y, const char* string) {
 #define SHIP 6
 #define WALL 219
 
-#define X_MIN 1
-#define X_MAX 26
-#define Y_MIN 1
-#define Y_MAX 30
+#define X_MIN 2
+#define X_MAX 25
+#define Y_MIN 2
+#define Y_MAX 29
+
+#define MAX_DIFF 6
+#define MIN_DIFF 1
 
 typedef struct {
   byte x;
@@ -195,38 +198,6 @@ __asm
 __endasm;
 }
 
-void initialise_walls() {
-  byte x = Y_MAX;
-  word x1_movement;
-  word x2_movement;
-  Walls walls;
-
-  walls.x1 = 10;
-  walls.x2 = 20;
-
-  while (x >= Y_MIN) {
-    x1_movement = rand();
-    x2_movement = rand();
-
-    if (x1_movement & 0 == 0 && walls.x1 > X_MIN + 1) {
-      walls.x1 -= 1;
-    } else if (walls.x1 < walls.x2 - 3) {
-      walls.x1 += 1;
-    }
-
-    if (x2_movement & 0 == 0 && walls.x2 > walls.x1 + 3) {
-      walls.x2 -= 1;
-    } else if (walls.x2 < X_MAX - 1) {
-      walls.x2 += 1;
-    }
-
-    newframe[walls.x1][x] = WALL;
-    newframe[walls.x2][x] = WALL;
-
-    x--;
-  }
-}
-
 void initialise_player() {
   player.x = 15;
   player.y = Y_MIN;
@@ -235,12 +206,12 @@ void initialise_player() {
 
 void draw_box() {
   Border border;
-  byte old_x1 = 0;
+  byte old_x1 = X_MIN - 1;
 
-  border.x1 = 0;
-  border.y1 = 0;
-  border.x2 = 27;
-  border.y2 = 31;
+  border.x1 = X_MIN - 1;
+  border.y1 = X_MIN - 1;
+  border.x2 = X_MAX + 1;
+  border.y2 = Y_MAX + 1;
 
   newframe[border.x1][border.y1] = BOX_CHARS[2];
   newframe[border.x2][border.y1] = BOX_CHARS[3];
@@ -285,15 +256,15 @@ void game_loop() {
   Walls prev, new;
   byte x, y;
 
-  while (1) {
-    x1_movement = rand();
-    x2_movement = rand();
+  newframe[10][Y_MAX] = WALL;
+  newframe[10 + MAX_DIFF][Y_MAX] = WALL;
 
+  while (1) {
     prev.x1 = prev.x2 = new.x1 = new.x2 = 0;
 
     // move all rows down the screen by one
-    for (x = X_MIN + 1; x <= X_MAX; x++) {
-      for (y = Y_MIN; y <= Y_MAX + 1; y++) {
+    for (x = X_MIN; x <= X_MAX; x++) {
+      for (y = Y_MIN; y <= Y_MAX; y++) {
         // if the current cell is a wall, 'move' it
         // one row down
         if (getchar(x, y) == WALL) {
@@ -330,17 +301,20 @@ void game_loop() {
     }
 
     // new row
-    if (x1_movement & 0 == 0 && prev.x1 > X_MIN + 1) {
+    x1_movement = rand();
+    x2_movement = rand();
+
+    if (x1_movement & 0 == 0 && prev.x1 > X_MIN + 1 && prev.x2 - prev.x1 <= MAX_DIFF) {
       new.x1 = prev.x1 - 1;
-    } else if (prev.x1 < prev.x2 - 2) {
+    } else if (prev.x1 < prev.x2 - (MIN_DIFF + 2)) {
       new.x1 = prev.x1 + 1;
     } else {
       new.x1 = prev.x1;
     }
 
-    if (x2_movement & 0 == 0 && prev.x2 > prev.x1 + 2) {
+    if (x2_movement & 0 == 0 && prev.x2 > prev.x1 + (MIN_DIFF + 2)) {
       new.x2 = prev.x2 - 1;
-    } else if (prev.x2 < X_MAX - 1) {
+    } else if (prev.x2 < X_MAX - 1 && prev.x2 - prev.x1 <= MAX_DIFF) {
       new.x2 = prev.x2 + 1;
     } else {
       new.x2 = prev.x2;
@@ -371,8 +345,6 @@ void main() {
     }
   }
 
-  draw_box();
-  initialise_walls();
   initialise_player();
   screen_flip();
 
