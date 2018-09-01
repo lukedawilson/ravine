@@ -201,7 +201,7 @@ void initialise_walls() {
   word x2_movement;
   Walls walls;
 
-  walls.x1 = 5;
+  walls.x1 = 10;
   walls.x2 = 20;
 
   while (x >= Y_MIN) {
@@ -210,11 +210,11 @@ void initialise_walls() {
 
     if (x1_movement & 0 == 0 && walls.x1 > X_MIN + 1) {
       walls.x1 -= 1;
-    } else if (walls.x1 < walls.x2 - 2) {
+    } else if (walls.x1 < walls.x2 - 3) {
       walls.x1 += 1;
     }
 
-    if (x2_movement & 0 == 0 && walls.x2 > walls.x1 + 2) {
+    if (x2_movement & 0 == 0 && walls.x2 > walls.x1 + 3) {
       walls.x2 -= 1;
     } else if (walls.x2 < X_MAX - 1) {
       walls.x2 += 1;
@@ -228,7 +228,7 @@ void initialise_walls() {
 }
 
 void initialise_player() {
-  player.x = 14;
+  player.x = 15;
   player.y = Y_MIN;
   newframe[player.x][player.y] = SHIP;
 }
@@ -283,7 +283,7 @@ void handle_player_input() {
 void game_loop() {
   word x1_movement, x2_movement;
   Walls prev, new;
-  byte x, y, exit_early_counter = 0;
+  byte x, y;
 
   while (1) {
     x1_movement = rand();
@@ -324,15 +324,6 @@ void game_loop() {
               delay(10);
             }
             return;
-          }
-
-          // exit early if both walls have been rendered,
-          // and we've subsequently gone through one more
-          // loop to clean up the cell to the right
-          if (exit_early_counter++ == 2) {
-            exit_early_counter++;
-          } else if (exit_early_counter++ == 3) {
-            break;
           }
         }
       }
