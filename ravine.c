@@ -1,4 +1,4 @@
-#include <string.h>
+﻿#include <string.h>
 
 typedef unsigned char byte;
 typedef unsigned short word;
@@ -156,8 +156,8 @@ void putstring(byte x, byte y, const char* string) {
 // GAME CODE //
 ///////////////
 
-#define SHIP 6
-#define WALL 219
+#define SHIP 30
+#define WALL 177
 
 #define X_MIN 2
 #define X_MAX 25
